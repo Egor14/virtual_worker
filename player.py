@@ -44,38 +44,39 @@ def cluster_labels2img(labels, arr):
 print('hey', flush=True)
 conn = psycopg2.connect(host=SETTINGS.host, dbname=SETTINGS.name, user=SETTINGS.user, password=SETTINGS.password)
 cur = conn.cursor()
-print('hey', flush=True)
-cur.execute("SELECT id, link FROM worker_task WHERE status=%s", (False,))
-tasks = cur.fetchall()
-for task in tasks:
 
-    image_response = requests.get(task[1])
-    with open('image.jpg', 'wb') as f:
-        # print(image_response.content)
-        f.write(image_response.content)
+while True:
+    cur.execute("SELECT id, link FROM worker_task WHERE status=%s", (False,))
+    tasks = cur.fetchall()
+    for task in tasks:
 
-    image = Image.open('image.jpg')
-    arr = np.array(image)
-    m = arr.shape[0]
-    n = arr.shape[1]
-    h = rgb2h(arr)
-    h = np.reshape(h, (m * n, 1))
+        image_response = requests.get(task[1])
+        with open('image.jpg', 'wb') as f:
+            # print(image_response.content)
+            f.write(image_response.content)
 
-    labels = kmeans(h, 3, 0.1)
+        image = Image.open('image.jpg')
+        arr = np.array(image)
+        m = arr.shape[0]
+        n = arr.shape[1]
+        h = rgb2h(arr)
+        h = np.reshape(h, (m * n, 1))
 
-    arr = np.reshape(arr, (m * n, 3))
+        labels = kmeans(h, 3, 0.1)
 
-    arr = cluster_labels2img(labels, arr)
+        arr = np.reshape(arr, (m * n, 3))
 
-    arr = np.reshape(arr, (m, n, 3))
+        arr = cluster_labels2img(labels, arr)
 
-    img = Image.fromarray(arr, 'RGB')
-    img.save('new.jpg')
-    with open('new.jpg', 'rb') as f:
-        image_bytes = f.read()
-        cur.execute("UPDATE worker_task SET status=%s, bytes=%s WHERE id=%s", (True, image_bytes, task[0]))
-        conn.commit()
+        arr = np.reshape(arr, (m, n, 3))
 
-print('hey', flush=True)
+        img = Image.fromarray(arr, 'RGB')
+        img.save('new.jpg')
+        with open('new.jpg', 'rb') as f:
+            image_bytes = f.read()
+            cur.execute("UPDATE worker_task SET status=%s, bytes=%s WHERE id=%s", (True, image_bytes, task[0]))
+            conn.commit()
+
+    print('hey', flush=True)
 
 
